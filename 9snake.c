@@ -71,17 +71,23 @@ apple_make(void)
 }
 
 void
+draw_cell(int x, int y, Image* col)
+{
+	draw(screen,
+		Rect(scrx+grid_x+(x*cell_size),
+			scry+grid_y+(y*cell_size),
+			scrx+grid_x+(x*cell_size)+cell_size,
+			scry+grid_y+(y*cell_size)+cell_size),
+		col, nil, ZP);
+}
+
+void
 apple_render(void)
 {
 	Apple *p = &apple;
 	// TODO: Render more than one apple
 
-	draw(screen,
-		Rect(scrx+grid_x+(p->x*cell_size),
-			scry+grid_y+(p->y*cell_size),
-			scrx+grid_x+(p->x*cell_size)+cell_size,
-			scry+grid_y+(p->y*cell_size)+cell_size),
-		applebg, nil, ZP);
+	draw_cell(p->x, p->y, applebg);
 }
 
 void
@@ -107,24 +113,12 @@ snake_render(void)
 	Snake *p = head;
 
 	if(!p) sysfatal("snake_draw: %r");
-	draw(screen,
-		Rect(scrx+grid_x+(p->x*cell_size),
-			scry+grid_y+(p->y*cell_size),
-			scrx+grid_x+(p->x*cell_size)+cell_size,
-			scry+grid_y+(p->y*cell_size)+cell_size),
-		snakeheadbg, nil, ZP);
-	
+	draw_cell(p->x, p->y, snakeheadbg);
+
 	p = p->next;
-	if(p){
-		while(p != nil){
-			draw(screen,
-				Rect(scrx+grid_x+(p->x*cell_size),
-					scry+grid_y+(p->y*cell_size),
-					scrx+grid_x+(p->x*cell_size)+cell_size,
-					scry+grid_y+(p->y*cell_size)+cell_size),
-				snakebg, nil, ZP);
-			p = p->next;
-		}
+	while(p){
+		draw_cell(p->x, p->y, snakebg);
+		p = p->next;
 	}
 }
 
@@ -242,11 +236,11 @@ redraw(void)
 	sprint(buf, "score: %d", apple.count);
 	string(screen, addpt(Pt(scrx, scry), Pt((scrw/2)-(stringwidth(display->defaultfont, buf)/2), 10)), fg, ZP, display->defaultfont, buf);
 
-	draw(screen, Rect(scrx+grid_x-2, scry+grid_y-2,
-		scrx+grid_x+(GRID_SIZE*cell_size)+4, scry+grid_y+(GRID_SIZE*cell_size)+4), innergridbg, nil, ZP);
+	draw(screen, Rect(scrx+grid_x-(BORDER/2), scry+grid_y-(BORDER/2),
+		scrx+grid_x+(GRID_SIZE*cell_size)+BORDER, scry+grid_y+(GRID_SIZE*cell_size)+BORDER), innergridbg, nil, ZP);
 
-	border(screen, Rect(scrx+grid_x-2, scry+grid_y-2,
-		scrx+grid_x+(GRID_SIZE*cell_size)+4, scry+grid_y+(GRID_SIZE*cell_size)+4),
+	border(screen, Rect(scrx+grid_x-(BORDER/2), scry+grid_y-(BORDER/2),
+		scrx+grid_x+(GRID_SIZE*cell_size)+BORDER, scry+grid_y+(GRID_SIZE*cell_size)+BORDER),
 		BORDER, gridbg, ZP);
 
 	apple_render();
@@ -288,6 +282,7 @@ main(int, char*[])
 	if(initdraw(nil, nil, argv0) < 0)
 		sysfatal("initdraw: %r");
 
+	// TODO: read from /dev/theme
 	bg = allocimagemix(display, DPalebluegreen, DWhite);
 	fg = allocimage(display, Rect(0, 0, 1, 1), RGB24, 1, DBlack);
 	gridbg = allocimage(display, Rect(0,0,1,1), RGB24, 1, 0x4A4A4AFF);
@@ -295,8 +290,7 @@ main(int, char*[])
 	snakeheadbg = allocimage(display, Rect(0,0,1,1), RGB24, 1, 0x7DFDA4FF);
 	snakebg = allocimage(display, Rect(0,0,1,1), RGB24, 1, 0x9EFEBBFF);
 	applebg = allocimage(display, Rect(0,0,1,1), RGB24, 1, 0xE47674FF);
-	
-		
+
 	eresized(0);
 	einit(Emouse | Ekeyboard);
 	timer = etimer(0, INTERVAL);
@@ -346,7 +340,6 @@ main(int, char*[])
 				game_logic();
 				snake_move();
 			}
-
 			redraw();
 		}
 	}
