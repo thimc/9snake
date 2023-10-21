@@ -1,6 +1,6 @@
 # 9snake
 
-![game](screen.png)
+![game](screenshot.png)
 
 ## Keyboard shortcuts
 
