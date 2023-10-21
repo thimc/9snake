@@ -1,0 +1,10 @@
+.TH 9WEATHER 1
+.SH NAME
+9snake \- snake game
+.SH SYNOPSIS
+.B snake
+.SH DESCRIPTION
+This page is intentionally left blank.
+.EE
+.SH BUGS
+Probably.
