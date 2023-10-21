@@ -7,8 +7,11 @@
 The player controls the snake using any of the keys below:
 
 h / ←
+
 j / ↓ 
+
 ↑ / k
+
 l / →
 
 q to quit
