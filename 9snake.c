@@ -39,15 +39,15 @@ int running;
 #define GRID_DIM 550
 #define BORDER 4
 
-#define cell_size() (int)(GRID_DIM / GRID_SIZE)
-#define scrx() (int)(screen->r.min.x)
-#define scry() (int)(screen->r.min.y)
-#define scrmx() (int)(screen->r.max.x)
-#define scrmy() (int)(screen->r.max.y)
-#define scrwidth() (int)(scrmx() - scrx())
-#define scrheight() (int)(scrmy() - scry())
-#define grid_x() (int)(WIDTH/2) - (GRID_DIM / 2)
-#define grid_y() (int)((HEIGHT/2) - (GRID_DIM / 2) + 22)
+#define cell_size (int)(GRID_DIM / GRID_SIZE)
+#define scrx (int)(screen->r.min.x)
+#define scry (int)(screen->r.min.y)
+#define scrmx (int)(screen->r.max.x)
+#define scrmy (int)(screen->r.max.y)
+#define scrw (int)(scrmx - scrx)
+#define scrh (int)(scrmy - scry)
+#define grid_x (int)(WIDTH/2) - (GRID_DIM / 2)
+#define grid_y (int)((HEIGHT/2) - (GRID_DIM / 2) + 22)
 
 void
 apple_make(void)
@@ -77,10 +77,10 @@ apple_render(void)
 	// TODO: Render more than one apple
 
 	draw(screen,
-		Rect(scrx()+grid_x()+(p->x*cell_size()),
-			scry()+grid_y()+(p->y*cell_size()),
-			scrx()+grid_x()+(p->x*cell_size())+cell_size(),
-			scry()+grid_y()+(p->y*cell_size())+cell_size()),
+		Rect(scrx+grid_x+(p->x*cell_size),
+			scry+grid_y+(p->y*cell_size),
+			scrx+grid_x+(p->x*cell_size)+cell_size,
+			scry+grid_y+(p->y*cell_size)+cell_size),
 		applebg, nil, ZP);
 }
 
@@ -108,23 +108,23 @@ snake_render(void)
 
 	if(!p) sysfatal("snake_draw: %r");
 	draw(screen,
-		Rect(scrx()+grid_x()+(p->x*cell_size()),
-			scry()+grid_y()+(p->y*cell_size()),
-			scrx()+grid_x()+(p->x*cell_size())+cell_size(),
-			scry()+grid_y()+(p->y*cell_size())+cell_size()),
+		Rect(scrx+grid_x+(p->x*cell_size),
+			scry+grid_y+(p->y*cell_size),
+			scrx+grid_x+(p->x*cell_size)+cell_size,
+			scry+grid_y+(p->y*cell_size)+cell_size),
 		snakeheadbg, nil, ZP);
 	
 	p = p->next;
 	if(p){
-	while(p != nil){
-		draw(screen,
-			Rect(scrx()+grid_x()+(p->x*cell_size()),
-				scry()+grid_y()+(p->y*cell_size()),
-				scrx()+grid_x()+(p->x*cell_size())+cell_size(),
-				scry()+grid_y()+(p->y*cell_size())+cell_size()),
-			snakebg, nil, ZP);
-		p = p->next;
-	}
+		while(p != nil){
+			draw(screen,
+				Rect(scrx+grid_x+(p->x*cell_size),
+					scry+grid_y+(p->y*cell_size),
+					scrx+grid_x+(p->x*cell_size)+cell_size,
+					scry+grid_y+(p->y*cell_size)+cell_size),
+				snakebg, nil, ZP);
+			p = p->next;
+		}
 	}
 }
 
@@ -163,11 +163,11 @@ snake_move(void)
         p->y = prev_y;
         p->dir = prev_dir;
 
-        p = p->next;
-
         prev_x = new_x;
         prev_y = new_y;
         prev_dir = new_dir;
+
+        p = p->next;
 	}
 }
 
@@ -237,16 +237,16 @@ redraw(void)
 {
 	char buf[64] = {0};
 
-	draw(screen, Rect(scrx(), scry(), scrx()+scrmx(), scry()+scrmy()), bg, nil, ZP);
+	draw(screen, Rect(scrx, scry, scrx+scrmx, scry+scrmy), bg, nil, ZP);
 
 	sprint(buf, "score: %d", apple.count);
-	string(screen, addpt(Pt(scrx(), scry()), Pt((scrwidth()/2)-(stringwidth(display->defaultfont, buf)/2), 10)), fg, ZP, display->defaultfont, buf);
+	string(screen, addpt(Pt(scrx, scry), Pt((scrw/2)-(stringwidth(display->defaultfont, buf)/2), 10)), fg, ZP, display->defaultfont, buf);
 
-	draw(screen, Rect(scrx()+grid_x()-2, scry()+grid_y()-2,
-		scrx()+grid_x()+(GRID_SIZE*cell_size())+4, scry()+grid_y()+(GRID_SIZE*cell_size())+4), innergridbg, nil, ZP);
+	draw(screen, Rect(scrx+grid_x-2, scry+grid_y-2,
+		scrx+grid_x+(GRID_SIZE*cell_size)+4, scry+grid_y+(GRID_SIZE*cell_size)+4), innergridbg, nil, ZP);
 
-	border(screen, Rect(scrx()+grid_x()-2, scry()+grid_y()-2,
-		scrx()+grid_x()+(GRID_SIZE*cell_size())+4, scry()+grid_y()+(GRID_SIZE*cell_size())+4),
+	border(screen, Rect(scrx+grid_x-2, scry+grid_y-2,
+		scrx+grid_x+(GRID_SIZE*cell_size)+4, scry+grid_y+(GRID_SIZE*cell_size)+4),
 		BORDER, gridbg, ZP);
 
 	apple_render();
@@ -277,7 +277,6 @@ void
 main(int, char*[])
 {
 	Event ev;
-	Mouse m;
 	int e, timer;
 	char *options1[] = {"","pause","quit", nil};
 	Menu middlemenu = {options1};
@@ -351,5 +350,4 @@ main(int, char*[])
 			redraw();
 		}
 	}
-	exits(nil);
 }
