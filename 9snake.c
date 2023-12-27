@@ -6,12 +6,14 @@
 
 Image *bg, *fg, *innergridbg, *gridbg, *snakeheadbg, *snakebg, *applebg;
 
-typedef enum {
+typedef enum direction Direction;
+enum
+{
 	DIRECTION_UP,
 	DIRECTION_DOWN,
 	DIRECTION_LEFT,
 	DIRECTION_RIGHT
-};
+} direction;
 
 typedef struct apple Apple;
 struct apple
@@ -23,29 +25,23 @@ Apple apple;
 typedef struct snake Snake;
 struct snake
 {
-	int x, y, dir;
+	int x, y;
+	Direction dir;
 	Snake *next;
 };
 
 Snake *head, *tail;
 
-int rounds = 0;
 int running;
 
 #define WIDTH 800
 #define HEIGHT 600
-#define INTERVAL 130
+#define INTERVAL 110
 #define GRID_SIZE 24
 #define GRID_DIM 550
 #define BORDER 4
 
 #define cell_size (int)(GRID_DIM / GRID_SIZE)
-#define scrx (int)(screen->r.min.x)
-#define scry (int)(screen->r.min.y)
-#define scrmx (int)(screen->r.max.x)
-#define scrmy (int)(screen->r.max.y)
-#define scrw (int)(scrmx - scrx)
-#define scrh (int)(scrmy - scry)
 #define grid_x (int)(WIDTH/2) - (GRID_DIM / 2)
 #define grid_y (int)((HEIGHT/2) - (GRID_DIM / 2) + 22)
 
@@ -73,11 +69,10 @@ apple_make(void)
 void
 draw_cell(int x, int y, Image* col)
 {
-	draw(screen,
-		Rect(scrx+grid_x+(x*cell_size),
-			scry+grid_y+(y*cell_size),
-			scrx+grid_x+(x*cell_size)+cell_size,
-			scry+grid_y+(y*cell_size)+cell_size),
+	draw(screen, Rect(screen->r.min.x+grid_x+(x*cell_size),
+		screen->r.min.y+grid_y+(y*cell_size),
+		screen->r.min.x+grid_x+(x*cell_size)+cell_size,
+		screen->r.min.y+grid_y+(y*cell_size)+cell_size),
 		col, nil, ZP);
 }
 
@@ -125,30 +120,30 @@ snake_render(void)
 void
 snake_move(void)
 {
-	Snake *p;
+	Snake *p = head;
 	int prev_x, prev_y, prev_dir;
 
-	prev_x = head->x;
-	prev_y = head->y;
-	prev_dir = head->dir;
+	if(!p) sysfatal("snake_move: %r");
+	prev_x = p->x;
+	prev_y = p->y;
+	prev_dir = p->dir;
 	
-	switch(head->dir){
+	switch(p->dir){
 	case DIRECTION_UP:
-		head->y--;
+		p->y--;
 		break;
 	case DIRECTION_DOWN:
-		head->y++;
+		p->y++;
 		break;
 	case DIRECTION_LEFT:
-		head->x--;
+		p->x--;
 		break;
 	case DIRECTION_RIGHT:
-		head->x++;
+		p->x++;
 		break;
 	}
 
-	p = head->next;
-	while(p){
+	while((p = p->next)){
         int new_x = p->x;
         int new_y = p->y;
         int new_dir = p->dir;
@@ -160,8 +155,6 @@ snake_move(void)
         prev_x = new_x;
         prev_y = new_y;
         prev_dir = new_dir;
-
-        p = p->next;
 	}
 }
 
@@ -200,22 +193,18 @@ snake_extend(void)
 void
 game_logic(void)
 {
-	Snake* p;
+	Snake* p = head;
 
-	if(head->x < 0 || head->x >= GRID_SIZE || head->y < 0 || head->y >= GRID_SIZE){
+	if(!p) sysfatal("snake_move: %r");
+	if(p->x < 0 || p->x >= GRID_SIZE || p->y < 0 || p->y >= GRID_SIZE){
 		print("You touched the wall, loser. %d point(s) to you.\n", apple.count);
 		exits(nil);
 	}
 
-	p = head;
-	if(p->next){
-		p = p->next;
-		while(p){
-			if(head->x == p->x && head->y == p->y){
-				print("Cannibal! You lose. %d point(s) to you.\n", apple.count);
-				exits(nil);
-			}
-			p = p->next;
+	while((p = p->next)){
+		if(head->x == p->x && head->y == p->y){
+			print("Cannibal! You lose. %d point(s) to you.\n", apple.count);
+			exits(nil);
 		}
 	}
 
@@ -229,19 +218,23 @@ game_logic(void)
 void
 redraw(void)
 {
-	char buf[64] = {0};
+	Rectangle r;
+	char buf[64];
 
-	draw(screen, Rect(scrx, scry, scrx+scrmx, scry+scrmy), bg, nil, ZP);
+	draw(screen, screen->r, bg, nil, ZP);
 
 	sprint(buf, "score: %d", apple.count);
-	string(screen, addpt(Pt(scrx, scry), Pt((scrw/2)-(stringwidth(display->defaultfont, buf)/2), 10)), fg, ZP, display->defaultfont, buf);
+	string(screen,
+		addpt(Pt(screen->r.min.x, screen->r.min.y),
+		Pt((Dx(screen->r)/2)-(stringwidth(display->defaultfont, buf)/2), display->defaultfont->height/2)),
+		fg, ZP, display->defaultfont, buf);
 
-	draw(screen, Rect(scrx+grid_x-(BORDER/2), scry+grid_y-(BORDER/2),
-		scrx+grid_x+(GRID_SIZE*cell_size)+BORDER, scry+grid_y+(GRID_SIZE*cell_size)+BORDER), innergridbg, nil, ZP);
+	r.min = addpt(screen->r.min, Pt(grid_x-(BORDER/2), grid_y-(BORDER/2)));
+	r.max = addpt(screen->r.min, Pt(grid_x+(GRID_SIZE*cell_size)+BORDER, grid_y+(GRID_SIZE*cell_size)+BORDER));
+	draw(screen, r, innergridbg, nil, ZP);
 
-	border(screen, Rect(scrx+grid_x-(BORDER/2), scry+grid_y-(BORDER/2),
-		scrx+grid_x+(GRID_SIZE*cell_size)+BORDER, scry+grid_y+(GRID_SIZE*cell_size)+BORDER),
-		BORDER, gridbg, ZP);
+	r.min = subpt(r.min, Pt(BORDER/2, BORDER/2));
+	border(screen, r, BORDER, gridbg, ZP);
 
 	apple_render();
 	snake_render();
@@ -260,8 +253,7 @@ resize(int x, int y)
 {
 	int fd;
 
-	fd = open("/dev/wctl", OWRITE);
-	if(fd){
+	if((fd = open("/dev/wctl", OWRITE))){
 		fprint(fd, "resize -dx %d -dy %d", x, y);
 		close(fd);
 	}
@@ -272,7 +264,7 @@ main(int, char*[])
 {
 	Event ev;
 	int e, timer;
-	char *options1[] = {"","pause","quit", nil};
+	char *options1[] = {"", "pause", "quit", nil};
 	Menu middlemenu = {options1};
 
 	snake_init();
@@ -307,18 +299,22 @@ main(int, char*[])
 				break;
 			case Kup:
 			case 'k':
+				if(head->dir == DIRECTION_DOWN) break;
 				head->dir = DIRECTION_UP;
 				break;
 			case Kdown:
 			case 'j':
+				if(head->dir == DIRECTION_UP) break;
 				head->dir = DIRECTION_DOWN;
 				break;
 			case Kleft:
 			case 'h':
+				if(head->dir == DIRECTION_RIGHT) break;
 				head->dir = DIRECTION_LEFT;
 				break;
 			case Kright:
 			case 'l':
+				if(head->dir == DIRECTION_LEFT) break;
 				head->dir = DIRECTION_RIGHT;
 				break;
 			}
@@ -336,11 +332,10 @@ main(int, char*[])
 			}
 		} else if(e == timer){
 			if(running){
-				rounds++;
-				game_logic();
 				snake_move();
+				game_logic();
+				redraw();
 			}
-			redraw();
 		}
 	}
 }
